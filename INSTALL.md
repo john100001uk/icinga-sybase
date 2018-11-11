@@ -21,6 +21,7 @@ SYB Blocked Processes : 0 - ok
 ```
 
 3. Install the check_syb.ksh
+
 This is where you need some Icinga expertise, as we installed it into a plugins directory, modified the permissions for SELinux, (ls -alZ and chcon). We had a nagios unix account set up running an NRPE process to execute the command.
 
 Your mileage will vary here.
