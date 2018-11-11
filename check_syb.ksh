@@ -1,6 +1,7 @@
 #!/bin/ksh
 #-------------------------------------------------------------------------------
-# File 		check_syb.ksh 
+## File : check_syb.ksh 
+## Desc : Run by Icinga/NRPE Agent, calls sp_dba_nagios and handles return statuses
 #-------------------------------------------------------------------------------
 # Usage
 #
@@ -35,8 +36,9 @@ scriptname=${0##*/}
 #-------------------------------------------------------------------------------
 # Variables
 #-------------------------------------------------------------------------------
-typeset -u upperhostname;upperhostname=`hostname`
-export DSQUERY=${upperhostname}_AS
+typeset -u upperhostname;upperhostname=`hostname`       #- Set up your
+export DSQUERY=${upperhostname}_AS                      #- DSQUERY here
+# Where this file is located
 export NAGIOSSCRIPTDIR=/usr/lib64/nagios/plugins
 # Sybase version dependancies, this will find the latest version
 if [ -d /opt/sybase/ASE1602 ] ; then
@@ -48,8 +50,10 @@ fi
 #
 . ${SYBASE}/SYBASE.sh
 export PATH=$PATH:$NAGIOSSCRIPTDIR
+# The NAGIOS_USER must be a valid login on ASE
 export NAGIOS_USER=nagios
-NAGIOS_PASSWD=XXXXXXXXXXXX
+NAGIOS_PASSWD=XXXXXXXXXXXX                             #- There are more secure ways
+#                                                      #- of passing the password!
 #-------------------------------------------------------------------------------
 # Functions
 #-------------------------------------------------------------------------------
@@ -127,5 +131,5 @@ case $1 in
 		## Run the stored procedure, for $4, the dbname see runsql function
 			runsql "sp_dba_nagios $1,$2,$3" | return_status
 	fi
-;;
+	;;
 esac

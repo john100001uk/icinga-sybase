@@ -1,3 +1,9 @@
+/******************************
+**
+** File : sp_dba_nagios.sql
+** Desc : Runs checks on a SAP/Sybase database server
+**
+******************************/
 USE sybsystemprocs
 GO
 
