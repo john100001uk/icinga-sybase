@@ -9,7 +9,6 @@
 ```
 isql -U<username> -S<DSQUERY> -P<password> -i sp_dba_nagios.sql
 ```
-You may get an error here due to a missing table(see docs for details)
 
 You can now test that the stored procedure is loaded and working
 
