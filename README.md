@@ -20,6 +20,6 @@ See docs directory for asciidoctor files
 
 ## ToDo
 - [ ] check_syb.ksh should be more generic/configurable
-
+- [ ] prob need some Icinga/Nagios expertise to contribute Agent/App set up
 
 
