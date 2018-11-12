@@ -5,7 +5,67 @@ John Knox <john@outlands.org.uk>
 v1.0, 30/10/2018
 
 == Introduction
+The shell script and stored procedure in this repository provides monitoring for a variety of checks for a Sybase Database Server. It provides a framework so you can use the checks included or add your own application specific checks. It was originally developed on RHEL6 for ASE 15.7/16.0 servers monitored by Icinga 1, using the NRPE agents, it's since been migrated to Icinga2 - details of configuration not known, but it did alert correctly.
 
+
+== Installation
+
+Pull or clone the repo from GitHub
+
+=== Install the stored procedure on the Database Server(s) you want to monitor
+You will need access to the 'isql' program - this will come with your ASE installation alternatively you will need access to Open Client. Also you will need an administration account/password of the server to load the stored procedure with - contact you DBA for this.
+
+------
+isql -U<username> -S<DSQUERY> -P<password> -i sp_dba_nagios.sql
+------
+
+You can now test that the stored procedure is loaded and working
+
+------
+isql -U<username> -S<DSQUERY> -P<password> -w1000
+1> sp_dba_nagios 3,10,20
+2> go
+SYB Blocked Processes : 0 - ok
+(return status = 0)
+------
+
+If you get the above message the stored procedure is loaded correctly
+
+=== Install the check_syb.ksh on every unix server running a Database Server
+
+It is assumed there is one Database Server running on each host, but it wouldn't be that difficult to modify this to monitor multile servers per host
+
+This is where you need some Icinga expertise, as we installed it into a plugins directory, modified the permissions for SELinux, (ls -alZ and chcon). We had a nagios unix account set up running an NRPE process to execute the command.
+
+You will have to edit the check_syb.ksh for your environment
+
+Change the sections below
+
+------
+#-------------------------------------------------------------------------------
+# Variables
+#-------------------------------------------------------------------------------
+#                                                       #- Set up your
+export DSQUERY=$DSQUERY                                 #- DSQUERY here
+# Where this file is located
+export NAGIOSSCRIPTDIR=/dir/dir1/nagios/plugins
+#
+# Sybase version dependancies, this will find the latest version
+if [ -d /opt/sybase/ASE1602 ] ; then
+        export SYBASE=/opt/sybase/ASE1602
+fi
+if [ -d /opt/sybase/ASE1570 ] ; then
+        export SYBASE=/opt/sybase/ASE1570
+fi
+#                                                      #- we need SYBASE.sh to pick
+#                                                      #- up the sybase environment
+. ${SYBASE}/SYBASE.sh
+export PATH=$PATH:$NAGIOSSCRIPTDIR
+# The NAGIOS_USER must be a valid login on ASE
+export NAGIOS_USER=nagios
+NAGIOS_PASSWD=XXXXXXXXXXXX                             #- There are more secure ways
+#                                                      #- of passing the password!
+------
 
 == Database Server Monitoring
 
@@ -86,8 +146,8 @@ The script can be run on the command line for troubleshooting purposes, as
 root on the monitored host
 
 ------------------------------------------------------------
-cd /usr/lib64/nagios/plugins
-[root@dlasedbagbl001 plugins]# sudo -u nagios ./check_syb.ksh 1 5 10
+cd /dir/dir1/nagios/plugins <-- your plugins directory
+[root@yourhost plugins]# sudo -u nagios ./check_syb.ksh 1 5 10
 SYB Uptime : 5429 mins ok
 ------------------------------------------------------------
 
@@ -101,9 +161,217 @@ account.
 The stored procedure can be run on the SQL command line for troubleshooting purposes
 
 ------------------------------------------------------------
-[sybase@dlasedbagbl001 sql]$ sql
+[sybase@yourhost sql]$ sql
 1> sp_dba_nagios 3,10,20
 2> go
 SYB Blocked Processes : 0 - ok
 (return status = 0)
 ------------------------------------------------------------
+
+== Database Server Checks
+
+The following checks are standard.
+
+=== ASE Uptime
+
+.ASE Uptime
+[width="80%",options="header",cols="1,4"]
+|===========================================================
+|Item|Description
+|Check Number    | 1
+|Check Name    | ASE Uptime
+|Check Frequency    | 1 minute
+|Plugin Parameters    | check_syb.ksh 1 10 5
+|Return status 0|SYB Uptime : 5460 mins ok
+|Return status 1|SYB Uptime : 8 mins warning
+|Return status 2|SYB Uptime : 4 mins critical
+|Return status 3|SYB CT-LIBRARY error: detected critical
+|Action|Log onto host and find the cause of the reboot or verify the server is running.
+|===========================================================
+
+
+=== User Connections
+
+.User Connections
+[width="80%",options="header",cols="1,4"]
+|===========================================================
+|Item|Description
+|Check Number    | 2
+|Check Name    | User Connections
+|Check Frequency    | 5 minute
+|Plugin Parameters    | check_syb.ksh 2 450 490 - see table below
+|Return status 0|SYB User Cnxns = 101 ok
+|Return status 1|SYB User Cnxns = 137 warning
+|Return status 2|SYB User Cnxns = 169 critical
+|Return status 3|SYB CT-LIBRARY error: detected critical
+|Action|Determine the cause of the increase in users, see the Appserver Connection
+Check, check responsiveness of server.
+|===========================================================
+
+
+=== Blocking Connections
+
+.Blocking Connections
+[width="80%",options="header",cols="1,4"]
+|===========================================================
+|Item|Description
+|Check Number    | 3
+|Check Name    | Blocking Connections
+|Check Frequency    | 1 minute
+|Plugin Parameters    | check_syb.ksh 3 10 30
+|Return status 0| SYB Blocked Processes : 0 ok
+|Return status 1| Blocked Processes : 11 warning
+|Return status 2| Blocked Processes : 11 warning
+|Return status 3|SYB CT-LIBRARY error: detected critical
+|Action| Identify the blocking process and notify owner or kill
+|===========================================================
+
+=== Transaction Log Used Percent
+
+.Transaction Log Used Percent
+[width="80%",options="header",cols="1,4"]
+|===========================================================
+|Item|Description
+|Check Number    | 4
+|Check Name    | Transaction Log Used Percent
+|Check Frequency    | 5 minute
+|Plugin Parameters    | check_syb.ksh 4 50 80 my_database
+|Return status 0| SYB Log Used Percent in my_database = 0.39% ok
+|Return status 1| SYB Log Used Percent in my_database = 52.10% warning
+|Return status 2| SYB Log Used Percent in my_database = 52.10% warning
+|Return status 3|SYB CT-LIBRARY error: detected critical
+|Action| Log onto the server determine what's causing the transaction log to fill up
+|===========================================================
+
+=== Database Used Percent
+
+.Database Used Percent
+[width="80%",options="header",cols="1,4"]
+|===========================================================
+|Item|Description
+|Check Number    | 5
+|Check Name    | Database Used Percent
+|Check Frequency    | 60 minute
+|Plugin Parameters    | check_syb.ksh 5 85 95 my_database
+|Return status 0| SYB Used Space in my_database = 69 percent ok
+|Return status 1| SYB Used Space in my_database = 87 percent warning
+|Return status 2| SYB Used Space in my_database = 98 percent critical
+|Return status 3|SYB CT-LIBRARY error: detected critical
+|Action| Arrange to have the database extended or some data archived
+|===========================================================
+
+=== Replication Check
+
+The replication check will be run in any primary/replicate pair, the
+thresholds relate to latency measurement in the replicate, in a primary a
+check will be performed for the existence of a Replication Agent and report
+it’s current scan page and if a Replication Agent is not running a critical
+message will be generated.
+
+.Replication Check
+[width="80%",options="header",cols="1,4"]
+|===========================================================
+|Item|Description
+|Check Number    | 6
+|Check Name    | Replication Check
+|Check Frequency    | 5 minute
+|Plugin Parameters    | check_syb.ksh 6 300 600 warmStandbyTest0[1,2]
+|Return status 0 - Replicate| SYB Rep Check : RDB = warmStandbyTest02 : Latency = 0 ok
+|Return status 0 - Primary| SYB Rep Check : PDB = warmStandbyTest01 : Page = 26650 ok
+|Return status 1 - Replicate| SYB Rep Check : RDB = warmStandbyTest01 ; Latency = 325 secs warning
+|Return status 2 - Replicate| SYB Rep Check : RDB = warmStandbyTest01 ; Latency = 625 secs criticall
+|Return status 2 - Primary| SYB Rep Check : RepAgent not running or missing LTM critical
+|Return status 3|SYB CT-LIBRARY error: detected critical
+|Action| Determine cause of latency and fix
+|===========================================================
+
+=== New Object Check
+
+[NOTE]
+==============================
+$2 is set to the number of minutes ago to check the crdate. Always set this to the same as the Check Frequency
+
+$4 is the database name that should be checked for new objects
+==============================
+
+.New Object Check
+[width="80%",options="header",cols="1,4"]
+|===========================================================
+|Item|Description
+|Check Number    | 7
+|Check Name    | New Object Check
+|Check Frequency    | 30 minute
+|Plugin Parameters    | check_syb.ksh 7 30 1 my_database
+|Return status 0 | SYB New Object Count : 0 new objects in my_database ok
+|Return status 1 | SYB New Object Count : 5 new objects in my_database warning
+|Return status 3|SYB CT-LIBRARY error: detected critical
+|Action| Check if a release has been made that would account for new objects
+|===========================================================
+
+=== Long Running Transactions
+
+.Long Running Transactions
+[width="80%",options="header",cols="1,4"]
+|===========================================================
+|Item|Description
+|Check Number    | 8
+|Check Name    | Long Running Transactions
+|Check Frequency    | 1 minute
+|Plugin Parameters    | check_syb.ksh 8 60 120 
+|Return status 0 | SYB Long Running Txn : None Detected ok
+|Return status 1 | SYB Long Running Txn : Spid=90 : Db=warmStandbyTest01 : Started at Apr 21 2015 11:35AM : Txn=$replication_truncation_point warning
+|Return status 2 | SYB Long Running Txn : Spid=100 : Db=warmStandbyTest01 : Started at Apr 21 2015 11:35AM : Txn=$replication_truncation_point critical
+|Return status 3|SYB CT-LIBRARY error: detected critical
+|Action| Log onto host determine the process from the spid in the error message
+|===========================================================
+
+
+=== Appserver Connection Check
+
+.Appserver Connection Check
+[width="80%",options="header",cols="1,4"]
+|===========================================================
+|Item|Description
+|Check Number    | 9
+|Check Name    | Appserver Connection Check
+|Check Frequency    | 10 minute
+|Plugin Parameters    | check_syb.ksh 9 120 200
+|Return status 0 | SYB Appserver Connections : 2/appserverl001 : 1/appserver002 :1/appserver03 : ok
+|Return status 1 | SYB Appserver Connections : 120/appserver002 : 100/appserver003 : 10/appserver001 : warning
+|Return status 3|SYB CT-LIBRARY error: detected critical
+|Action| Consider stopping and restarting appserver
+|===========================================================
+
+=== Phantom Lock Detection
+
+.Phantom Lock Detection
+[width="80%",options="header",cols="1,4"]
+|===========================================================
+|Item|Description
+|Check Number    | 10
+|Check Name    | Phantom Lock Detection
+|Check Frequency    | 7.00 and 16:00
+|Plugin Parameters    | check_syb.ksh 10 1 1
+|Return status 0 | SYB Phantom Lock : 0 Phantom Locks Detected - ok
+|Return status 2 | SYB Phantom Lock : 1 Phantom Locks Detected - critical
+|Return status 3|SYB CT-LIBRARY error: detected critical
+|Action| Arrange a reboot of the server
+|===========================================================
+
+=== Open Object Check
+
+.Open Object Check
+[width="80%",options="header",cols="1,4"]
+|===========================================================
+|Item|Description
+|Check Number    | 11
+|Check Name    | Open Object Check
+|Check Frequency    | 6 hours
+|Plugin Parameters    | check_syb.ksh 11 90 98
+|Return status 0 | SYB Open Object Check : 35 percent Open Object Used - ok
+|Return status 1 | SYB Open Object Check : 91 percent Open Object Used - warn
+|Return status 2 | SYB Open Object Check : 99 percent Open Object Used - critical
+|Return status 3|SYB CT-LIBRARY error: detected critical
+|Action| Log onto database server, review config and increase if necessary
+|===========================================================
+
