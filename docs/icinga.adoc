@@ -95,7 +95,7 @@ the Icinga installation and placed in the plugins directory
 ------------------------------------------------------------
  check_syb.ksh <report id> <warn_at> <critical_at> [ <dbname> ]
 
- sp_dba_nagios [ null | 1-13 ] , @warn_at , @critical_at
+ sp_dba_nagios [ null | 1-12 ] , @warn_at , @critical_at
 
  Parameter      Check                                Nos of params
  ---------      -----                                -------------
@@ -348,7 +348,7 @@ $4 is the database name that should be checked for new objects
 [width="80%",options="header",cols="1,4"]
 |===========================================================
 |Item|Description
-|Check Number    | 10
+|Check Number    | 11
 |Check Name    | Phantom Lock Detection
 |Check Frequency    | 7.00 and 16:00
 |Plugin Parameters    | check_syb.ksh 10 1 1
@@ -364,7 +364,7 @@ $4 is the database name that should be checked for new objects
 [width="80%",options="header",cols="1,4"]
 |===========================================================
 |Item|Description
-|Check Number    | 11
+|Check Number    | 12
 |Check Name    | Open Object Check
 |Check Frequency    | 6 hours
 |Plugin Parameters    | check_syb.ksh 11 90 98
