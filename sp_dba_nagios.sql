@@ -40,7 +40,7 @@ if (@check = null)
 begin
 	print ' check_syb.ksh <report id> <warn_at> <critical_at> [ <dbname> ]'
 	print ''
-	print ' sp_dba_nagios [ null | 1-10 ] , @warn_at , @critical_at'
+	print ' sp_dba_nagios [ null | 1-12 ] , @warn_at , @critical_at'
 	print ' '
         print ' Parameter      Check                                Nos of params'
         print ' ---------      -----                                -------------'
