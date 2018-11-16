@@ -95,7 +95,7 @@ the Icinga installation and placed in the plugins directory
 ------------------------------------------------------------
  check_syb.ksh <report id> <warn_at> <critical_at> [ <dbname> ]
 
- sp_dba_nagios [ null | 1-7 ] , @warn_at , @critical_at
+ sp_dba_nagios [ null | 1-13 ] , @warn_at , @critical_at
 
  Parameter      Check                                Nos of params
  ---------      -----                                -------------
