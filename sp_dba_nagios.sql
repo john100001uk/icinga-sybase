@@ -529,6 +529,7 @@ end
 --  As an offline database is not accessible to execute a sp in as per other 4 parameter checks. 
 --  This generates a warning only and @critical_at is used to pass a dbid in
 --
+if (@check = 12)
 begin
         declare @dumpdate	datetime,
 		@now		datetime,
